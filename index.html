@@ -38,12 +38,15 @@
 
           <h3>Vectorspace</h3>
           <div>
+            <strong>Stopwords</strong>
             <p>You can upload a text file of newline separated stop words.  These 
             words will be stripped from the input documents.</p>
             <button id='stopwords'>Upload Stopwords (.txt)</button>
             <input type='file' id='stopwords_input' style="display:none;" />
             <br />
+            <strong>Document 1</strong>
             <textarea id='content' style="width:100%;" rows="5"></textarea><br />
+            <strong>Document 2</strong>
             <textarea id='content2' style="width:100%;" rows="5"></textarea><br />
             <button id='btn'>process</button>
             <pre id='out'></pre>
@@ -98,8 +101,20 @@ $(function() {
         Bigrams.init($learning.val());
         $learning.val('');
     });
-
-    $('#write').on('click', function(event) {
+    
+    if (!String.prototype.endsWith) {
+        String.prototype.endsWith = function(searchString, position) {
+    	    var subjectString = this.toString();
+    	    if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+    	        position = subjectString.length;
+            }
+    	    position -= searchString.length;
+    	    var lastIndex = subjectString.indexOf(searchString, position);
+    	    return lastIndex !== -1 && lastIndex === position;
+        };
+    }
+    
+    var generate = function() {
         var sofar = $learning.val();
         var words = sofar.split(' '); /* for now, don't allow double space */
         var next = '';
@@ -108,20 +123,29 @@ $(function() {
             next = Bigrams.generate("|");
         } else {
             var last = words[words.length-1];
-            $('#log').append(last + '\n');
-            if (last === '.' || last.endswith(".")) {
-            	console.log('asdfasdf');
-            	next = Bigrams.generate("|");
+            if (last === '.' || last.endsWith(".")) {
+                next = Bigrams.generate("|");
             } else {
                 next = Bigrams.generate(last);
             }
         }
 
         if (next === '.') {
-        	$learning.val(sofar + next);
+            $learning.val(sofar + next);
         } else {
-        	$learning.val(sofar + ' ' + next);	
+            $learning.val(sofar + ' ' + next);  
         }
+    };
+    
+    $learning.keyup(function(event) {
+        if (event.which == 32) {
+            // space
+            generate();
+        }
+    });
+
+    $('#write').on('click', function(event) {
+        generate();
     });
 });
 </script>
@@ -151,6 +175,7 @@ $(function() {
       </div>
     </div>
 
+    <script src="assets/jquery.selectrange.js"></script>
     <script src="src/bigrams.js"></script>
     <script src="src/vectorspace.js"></script>
   
