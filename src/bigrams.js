@@ -33,7 +33,7 @@
             if (this.bigrams[now] == undefined) {
                 this.bigrams[now] = {};
             }
-            
+
             if (this.bigrams[now][next] == undefined) {
                 this.bigrams[now][next] = 0;
             }
@@ -87,7 +87,7 @@
             if (words.length < 2) {
                 throw "Document must have at least two words.";
             }
-            
+
             /* handle edge case: sentence starts with. */
             this.addBigram('|', words[0]);
 
@@ -96,12 +96,10 @@
                 var t1 = words[i+1];
                 this.addBigram(t0, t1);
             }
-            
-            $('#log').text(JSON.stringify(this.bigrams, null, 2));
 
             return;
         },
-        
+
         /**
          * Given what it knows so far, and providing the current word, return
          * what it thinks will be the next word (the one with the highest probability)
@@ -115,7 +113,7 @@
                  */
                 return "";
             }
-            
+
             var options = [];
             var available = Object.keys(this.bigrams[curr]);
             for (var i = 0; i < available.length; i++) {
@@ -125,9 +123,6 @@
             var sorted = options.sort(function(a, b) {
                 return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0;
             });
-
-            $('#log').append(JSON.stringify(sorted, null, 2) + '\n');
-            $('#log').append('word: ' + sorted[0][0] + '\n');
 
             /* if there are multiple that are the same probability, it should
              * randomly choose one of them, instead of always choosing the top
@@ -144,13 +139,13 @@
                         break; /* we're done. */
                     }
                 }
-                
+
                 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
                 // Returns a random integer between min (included) and max (excluded)
                 var getRandomInt = function(min, max) {
                     return Math.floor(Math.random() * (max - min)) + min;
                 }
-                
+
                 var get = getRandomInt(0, newtop.length);
                 return newtop[get];
             } else {
