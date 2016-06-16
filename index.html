@@ -36,6 +36,96 @@
           <h3><a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
           <p>...</p>
 
+          <h3>Vectorspace</h3>
+          <div>
+            <p>You can upload a text file of newline separated stop words.  These 
+            words will be stripped from the input documents.</p>
+            <button id='stopwords'>Upload Stopwords (.txt)</button>
+            <input type='file' id='stopwords_input' style="display:none;" />
+            <br />
+            <textarea id='content' style="width:100%;" rows="5"></textarea><br />
+            <textarea id='content2' style="width:100%;" rows="5"></textarea><br />
+            <button id='btn'>process</button>
+            <pre id='out'></pre>
+            <pre id='log'></pre>
+          </div>
+<script>
+$(function() {
+    $('#stopwords').on('click', function(event) {
+        $('#stopwords_input').trigger('click');
+    });
+    $('#stopwords_input').on('change', function(event) {
+        if (this.files[0] == undefined) {
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function(){
+            var text = reader.result;
+            VectorSpace.importStopwords(text);
+        };
+        reader.readAsText(this.files[0]);
+    });
+    $('#btn').on('click', function(event) {
+        event.preventDefault();
+        $('#log').empty();
+        var $out = $('#out');
+        $out.empty();
+
+        var modelA = VectorSpace.process($('#content').val());
+        var modelB = VectorSpace.process($('#content2').val());
+        var score = VectorSpace.cosineSimilarity(modelA, modelB) * 100;
+
+        $out.append(JSON.stringify(modelA, null, 2) + '\n');
+        $out.append(JSON.stringify(modelB, null, 2) + '\n');
+        $out.append(score + '%');
+    });
+});
+</script>
+
+          <h3>Bigrams</h3>
+          <div>
+            <textarea id='learning' style="width:100%;" rows="10"></textarea><br />
+            <button id='learn'>Learn</button>
+            <button id='write'>Write</button>
+            <p id='output'></p>
+            <pre id='log'></pre>
+          </div>
+<script>
+$(function() {
+    var $learning = $('#learning');
+
+    $('#learn').on('click', function(event) {
+        Bigrams.init($learning.val());
+        $learning.val('');
+    });
+
+    $('#write').on('click', function(event) {
+        var sofar = $learning.val();
+        var words = sofar.split(' '); /* for now, don't allow double space */
+        var next = '';
+
+        if (sofar.length == 0) {
+            next = Bigrams.generate("|");
+        } else {
+            var last = words[words.length-1];
+            $('#log').append(last + '\n');
+            if (last === '.' || last.endswith(".")) {
+            	console.log('asdfasdf');
+            	next = Bigrams.generate("|");
+            } else {
+                next = Bigrams.generate(last);
+            }
+        }
+
+        if (next === '.') {
+        	$learning.val(sofar + next);
+        } else {
+        	$learning.val(sofar + ' ' + next);	
+        }
+    });
+});
+</script>
+
           <h3>License</h3>
           <p><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></p>
 

@@ -1,4 +1,7 @@
 /**
+ * URL: http://pstrinkle.github.io/javascript-modeling
+ * Author: Patrick Trinkle <https://github.com/pstrinkle>
+ * Version: 1.0.0
  * Copyright 2016 Patrick Trinkle
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +46,7 @@
 
         cleanup: function(d) {
             /* the following code also appears in my VectorSpace module... */
-            var bad = ['.', ',', '?', '!', ':', ';'];
+            var bad = ['.', ',', '?', '!', ':', ';', '(', ')'];
             var escapeRegExp = function(string) {
                 return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
             };
@@ -58,6 +61,7 @@
              */
             for (var i = 0; i < bad.length; i++) {
                 d = replaceAll(d, bad[i] + " ", " ");
+                d = replaceAll(d, " " + bad[i], " ");
             }
 
             return d;
@@ -111,7 +115,7 @@
                 /* we have no idea..., could rely on part-of-speech, or
                  * ... a few other optiosn.
                  */
-                return "";
+                return ".";
             }
 
             var options = [];

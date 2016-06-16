@@ -1,4 +1,7 @@
 /**
+ * URL: http://pstrinkle.github.io/javascript-modeling
+ * Author: Patrick Trinkle <https://github.com/pstrinkle>
+ * Version: 1.0.0
  * Copyright 2016 Patrick Trinkle
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -158,18 +161,10 @@
 
             return (dotProduct / (a_sqrt * b_sqrt))
         },
-    
-        /**
-         * Given a string, it splits it into words and returns a term weight
-         * dictionary, such that term weight is 0.5 + (0.5 * tw/max)
-         *
-         * It doesn't normalize anything yet based on the document length.
-         *
-         * d := the string
-         * stop := boolean whether to care about stopwords.
-         */
-        process: function(d, stop = true) {
-            var bad = ['.', ',', '?', '!', ':', ';'];
+
+        cleanup: function(d) {
+            /* the following code also appears in my VectorSpace module... */
+            var bad = ['.', ',', '?', '!', ':', ';', '(', ')'];
             var escapeRegExp = function(string) {
                 return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
             };
@@ -184,7 +179,23 @@
              */
             for (var i = 0; i < bad.length; i++) {
                 d = replaceAll(d, bad[i] + " ", " ");
+                d = replaceAll(d, " " + bad[i], " ");
             }
+
+            return d;
+        },
+
+        /**
+         * Given a string, it splits it into words and returns a term weight
+         * dictionary, such that term weight is 0.5 + (0.5 * tw/max)
+         *
+         * It doesn't normalize anything yet based on the document length.
+         *
+         * d := the string
+         * stop := boolean whether to care about stopwords.
+         */
+        process: function(d, stop = true) {
+        	d = this.cleanup(d);
 
             /* probably does leave some words that are ' ' */
             var words = d.split(' ');
