@@ -32,6 +32,10 @@
          */
         bigrams: {},
 
+        getBigrams: function() {
+            return this.bigrams;
+        },
+
         addBigram: function(now, next) {
             if (this.bigrams[now] == undefined) {
                 this.bigrams[now] = {};
@@ -53,32 +57,37 @@
          * you can add more data to the model if you want later.
          */
         init: function(d) {
-            d = this.cleanup(d);
-
             var bigrams = {};
-            var terms = d.split(' '); /* could be '' in there. */
-            var words = [];
 
-            for (var i = 0; i < terms.length; i++) {
-                if (terms[i] === '' || terms[i] === ' ') {
+            d = this.cleanup(d, false);
+
+            /* process each sentence. */
+            var sentences = d.split(' . ');
+            for (var s = 0; s < sentences.length; s++) {
+                var words = [];
+                var terms = sentences[s].split(' '); /* could be '' in there. */
+
+                for (var i = 0; i < terms.length; i++) {
+                    if (terms[i] === '' || terms[i] === ' ') {
+                        continue;
+                    }
+
+                    var l = terms[i].toLowerCase();
+                    words.push(l);
+                }
+
+                if (words.length < 2) {
                     continue;
                 }
 
-                var l = terms[i].toLowerCase();
-                words.push(l);
-            }
+                /* handle edge case: sentence starts with. */
+                this.addBigram('|', words[0]);
 
-            if (words.length < 2) {
-                throw "Document must have at least two words.";
-            }
-
-            /* handle edge case: sentence starts with. */
-            this.addBigram('|', words[0]);
-
-            for (i = 0; i < (words.length-1); i++) {
-                var t0 = words[i];
-                var t1 = words[i+1];
-                this.addBigram(t0, t1);
+                for (i = 0; i < (words.length-1); i++) {
+                    var t0 = words[i];
+                    var t1 = words[i+1];
+                    this.addBigram(t0, t1);
+                }
             }
 
             return;
@@ -91,14 +100,14 @@
          * ... need to re-examine the posterior probabilities.
          */
         generate: function(curr) {
+            curr = curr.toLowerCase();
+
             if (this.bigrams[curr] == undefined) {
                 /* we have no idea..., could rely on part-of-speech, or
                  * ... a few other optiosn.
                  */
                 return ".";
             }
-            
-            curr = curr.toLowerCase();
 
             var options = [];
             var available = Object.keys(this.bigrams[curr]);

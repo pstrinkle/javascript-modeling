@@ -31,12 +31,16 @@
          * likely have that operation occur whenever it learns from a new document.
          */
         trigrams: {},
+        
+        getTrigrams: function() {
+            return this.trigrams;
+        },
 
         addTrigram: function(prev, now, next) {
-        	if (this.trigrams[prev] == undefined) {
-        		this.trigrams[prev] = {};
-        	}
-        	
+            if (this.trigrams[prev] == undefined) {
+                this.trigrams[prev] = {};
+            }
+
             if (this.trigrams[prev][now] == undefined) {
                 this.trigrams[prev][now] = {};
             }
@@ -48,6 +52,27 @@
             this.trigrams[prev][now][next] += 1;
         },
 
+        starts: {},
+        seconds: {},
+
+        addStart: function(now, next) {
+        	if (this.starts[now] == undefined) {
+        		this.starts[now] = 0;
+        	}
+
+        	this.starts[now] += 1;
+        	
+        	if (this.seconds[now] == undefined) {
+        		this.seconds[now] = {};
+        	}
+        	
+        	if (this.seconds[now][next] == undefined) {
+        		this.seconds[now][next] = 0;
+        	}
+        	
+        	this.seconds[now][next] += 1;
+        },
+
         cleanup: function(d) {
             return d;
         },
@@ -57,33 +82,39 @@
          * you can add more data to the model if you want later.
          */
         init: function(d) {
-            d = this.cleanup(d);
+        	var trigrams = {};
 
-            var trigrams = {};
-            var terms = d.split(' '); /* could be '' in there. */
-            var words = [];
+            d = this.cleanup(d, false);
 
-            for (var i = 0; i < terms.length; i++) {
-                if (terms[i] === '' || terms[i] === ' ') {
+            /* process each sentence. */
+            var sentences = d.split(' . ');
+            for (var s = 0; s < sentences.length; s++) {
+                var terms = d.split(' '); /* could be '' in there. */
+                var words = [];
+
+                for (var i = 0; i < terms.length; i++) {
+                    if (terms[i] === '' || terms[i] === ' ') {
+                        continue;
+                    }
+
+                    var l = terms[i].toLowerCase();
+                    words.push(l);
+                }
+
+                if (words.length < 3) {
                     continue;
                 }
 
-                var l = terms[i].toLowerCase();
-                words.push(l);
-            }
+                /* handle edge case: sentence starts with. */
+                this.addTrigram('|', words[0], words[1]);
+                this.addStart(words[0], words[1]);
 
-            if (words.length < 3) {
-                throw "Document must have at least two words.";
-            }
-
-            /* handle edge case: sentence starts with. */
-            this.trigrams('|', words[0], words[1]);
-
-            for (i = 0; i < (words.length-2); i++) {
-                var t0 = words[i];
-                var t1 = words[i+1];
-                var t2 = words[i+2];
-                this.addTrigram(t0, t1, t2);
+                for (i = 0; i < (words.length-2); i++) {
+                    var t0 = words[i];
+                    var t1 = words[i+1];
+                    var t2 = words[i+2];
+                    this.addTrigram(t0, t1, t2);
+                }            	
             }
 
             return;
@@ -96,25 +127,38 @@
          * ... need to re-examine the posterior probabilities.
          */
         generate: function(prev, curr) {
-            if (this.trigrams[prev] == undefined || this.trigrams[prev][curr] == undefined) {
-                /* we have no idea..., could rely on part-of-speech, or
-                 * ... a few other optiosn.
-                 */
-                return ".";
-            }
+        	if (prev === '|' && curr == undefined) {
+        		/* first word. */        		
+        		var options = [];
+        		var available = Object.keys(this.starts);
+                for (var i = 0; i < available.length; i++) {
+                    var t = available[i];
+                    options.push([t, this.starts[t]]);
+                }
+                var sorted = options.sort(function(a, b) {
+                    return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0;
+                });
+        	} else {
+        		prev = prev.toLowerCase();
+                curr = curr.toLowerCase();
 
-            prev = prev.toLowerCase();
-            curr = curr.toLowerCase();
+                if (this.trigrams[prev] == undefined || this.trigrams[prev][curr] == undefined) {
+                    /* we have no idea..., could rely on part-of-speech, or
+                     * ... a few other optiosn.
+                     */
+                    return ".";
+                }
 
-            var options = [];
-            var available = Object.keys(this.trigrams[prev][curr]);
-            for (var i = 0; i < available.length; i++) {
-                var t = available[i];
-                options.push([t, this.trigrams[prev][curr][t]]);
-            }
-            var sorted = options.sort(function(a, b) {
-                return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0;
-            });
+                var options = [];
+                var available = Object.keys(this.trigrams[prev][curr]);
+                for (var i = 0; i < available.length; i++) {
+                    var t = available[i];
+                    options.push([t, this.trigrams[prev][curr][t]]);
+                }
+                var sorted = options.sort(function(a, b) {
+                    return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0;
+                });
+        	}
 
             /* if there are multiple that are the same probability, it should
              * randomly choose one of them, instead of always choosing the top
