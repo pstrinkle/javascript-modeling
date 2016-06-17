@@ -33,29 +33,110 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <h3><a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+          <h3><a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>The Basics</h3>
           <p>...</p>
+<script>
+$(function() {
+    if (!String.prototype.endsWith) {
+        String.prototype.endsWith = function(searchString, position) {
+            var subjectString = this.toString();
+            if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+                position = subjectString.length;
+            }
+            position -= searchString.length;
+            var lastIndex = subjectString.indexOf(searchString, position);
+            return lastIndex !== -1 && lastIndex === position;
+        };
+    }
+});
+</script>
 
           <h3>Vectorspace</h3>
           <div>
-            <strong>Stopwords</strong>
+            <h4>Stopwords</h4>
             <p>You can upload a text file of newline separated stop words.  These 
             words will be stripped from the input documents.</p>
             <button id='stopwords'>Upload Stopwords (.txt)</button>
             <input type='file' id='stopwords_input' style="display:none;" />
+            <pre id='stopwords_area'></pre>
+          </div>
+          <div>
+            <h4>Queries</h4>
+            <p>Need to allow uploading loads of files for querying.</p>
+            <button id='upload_document'>Upload document (.txt)</button><button id='clear_corpus'>clear</button>
+            <input type='file' id='upload_document_input' style="display:none;" />
+            <br /><br />
+            <div id='docs'></div>
             <br />
-            <strong>Document 1</strong>
-            <textarea id='content' style="width:100%;" rows="5"></textarea><br />
-            <strong>Document 2</strong>
-            <textarea id='content2' style="width:100%;" rows="5"></textarea><br />
-            <button id='btn'>process</button>
+            <strong>Enter query:</strong>&nbsp;<input type='text' id='query_input' />
+            <button id='run_query'>query</button><button id='clear'>clear</button>
+            <br />
+            <div id='results'></div>
+            <pre id='qout'></pre>
+          </div>
+          <div>
+            <h4>Document Comparison</h4>
+            <p>You can enter text into each box and compare the two documents.</p>
+            <div>
+              <div style="width:50%;float:left;">
+                <strong>Document 1</strong>
+                <textarea id='content' style="width:98%;resize:vertical;" rows="5"></textarea>
+              </div>
+              <div style="width:50%;float:left;">
+                <strong>Document 2</strong>
+                <textarea id='content2' style="width:98%;resize:vertical;" rows="5"></textarea>
+              </div>
+            </div>
+            <div style="clear:both;"></div>
+            <button id='btn'>Compare</button>
             <pre id='out'></pre>
-            <pre id='log'></pre>
           </div>
 <script>
 $(function() {
+    VectorSpace.cleanup = Util.cleanup;
+
+    var updateList = function() {
+        var docs = VectorSpace.listCorpus();
+        var $docs = $('#docs');
+        $docs.empty();
+        $.each(docs, function(index, element) {
+            var $li = $('<li>', {text: element});
+            $li.on('click', function(event) {
+                var $q = $('#qout');
+                $q.empty();
+                $q.text('"' + VectorSpace.getDocument(element) + '"\n');
+                $q.append(JSON.stringify(VectorSpace.getDocumentTf(element), null, 2));
+            });
+            $docs.append($li);
+        });
+    };
+    $('#clear_corpus').on('click', function(event) {
+    	$('#docs').empty();
+    	VectorSpace.emptyCorpus();
+    });
+    $('#clear').on('click', function(event) {
+        $('#results').empty();
+    });
+    $('#run_query').on('click', function(event) {
+        var $results = $('#results');
+        $('#qout').empty();
+        var results = VectorSpace.query($('#query_input').val());
+
+        $results.empty();
+        var $ol = $('<ol>');
+
+        $.each(results, function(index, element) {
+            $ol.append($('<li>', {text: element[0]}));
+        });
+
+        $results.append($ol);
+    });
+
     $('#stopwords').on('click', function(event) {
         $('#stopwords_input').trigger('click');
+    });
+    $('#upload_document').on('click', function(event) {
+        $('#upload_document_input').trigger('click');
     });
     $('#stopwords_input').on('change', function(event) {
         if (this.files[0] == undefined) {
@@ -65,6 +146,21 @@ $(function() {
         reader.onload = function(){
             var text = reader.result;
             VectorSpace.importStopwords(text);
+            /* */
+            $('#stopwords_area').text(JSON.stringify(VectorSpace.getStopwords(), null, 2));
+        };
+        reader.readAsText(this.files[0]);
+    });
+    $('#upload_document_input').on('change', function(event) {
+        if (this.files[0] == undefined) {
+            return;
+        }
+        var name = this.files[0]['name'];
+        var reader = new FileReader();
+        reader.onload = function(){
+            var text = reader.result; 
+            VectorSpace.addDocument(name, text);
+            updateList();
         };
         reader.readAsText(this.files[0]);
     });
@@ -87,42 +183,36 @@ $(function() {
 
           <h3>Bigrams</h3>
           <div>
+            <ol>
+              <li>Enter text into the box.</li>
+              <li>Click "Learn" for it to update the model</li>
+              <li>Click "Write" to generate words, or type directly into the box.</li>
+            </ol>
             <textarea id='learning' style="width:100%;" rows="10"></textarea><br />
             <button id='learn'>Learn</button>
             <button id='write'>Write</button>
-            <p id='output'></p>
-            <pre id='log'></pre>
           </div>
 <script>
 $(function() {
     var $learning = $('#learning');
+    Bigrams.cleanup = Util.cleanup;
 
     $('#learn').on('click', function(event) {
         Bigrams.init($learning.val());
         $learning.val('');
     });
-    
-    if (!String.prototype.endsWith) {
-        String.prototype.endsWith = function(searchString, position) {
-    	    var subjectString = this.toString();
-    	    if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
-    	        position = subjectString.length;
-            }
-    	    position -= searchString.length;
-    	    var lastIndex = subjectString.indexOf(searchString, position);
-    	    return lastIndex !== -1 && lastIndex === position;
-        };
-    }
-    
-    var generate = function() {
-        var sofar = $learning.val();
-        var words = sofar.split(' '); /* for now, don't allow double space */
+
+    var generate = function(highlight = false) {
+        var sofar = $learning.val().trim();        
         var next = '';
+        var plusone = 0;
 
         if (sofar.length == 0) {
             next = Bigrams.generate("|");
         } else {
+            var words = sofar.split(' ');            
             var last = words[words.length-1];
+
             if (last === '.' || last.endsWith(".")) {
                 next = Bigrams.generate("|");
             } else {
@@ -131,16 +221,27 @@ $(function() {
         }
 
         if (next === '.') {
-            $learning.val(sofar + next);
+            if (!highlight) {
+                $learning.val(sofar + next + ' ');
+            }
         } else {
-            $learning.val(sofar + ' ' + next);  
+            if (sofar.length == 0) {
+                $learning.val(sofar + next);
+            } else {
+                plusone = 1;
+                $learning.val(sofar + ' ' + next);    
+            }
+
+            if (highlight) {
+                $learning.selectRange(sofar.length + plusone, -1);
+            }
         }
     };
     
     $learning.keyup(function(event) {
         if (event.which == 32) {
             // space
-            generate();
+            generate(true);
         }
     });
 
@@ -149,6 +250,10 @@ $(function() {
     });
 });
 </script>
+
+          <h3>Trigrams</h3>
+          <p>Coming shortly.</p>
+          <p><strong>How to have it generate it's first word...</strong></p>
 
           <h3>License</h3>
           <p><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></p>
@@ -176,6 +281,7 @@ $(function() {
     </div>
 
     <script src="assets/jquery.selectrange.js"></script>
+    <script src="src/util.js"></script>
     <script src="src/bigrams.js"></script>
     <script src="src/vectorspace.js"></script>
   
