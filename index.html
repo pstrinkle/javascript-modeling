@@ -344,6 +344,22 @@ $(function() {
 });
 </script>
 
+          <h3>String Cleaning</h3>
+          <div>
+            <p>Just for testing what happens when strings are sent in.</p>
+            <textarea id='dirty' style="width:100%;" rows="5"></textarea><br />
+            <textarea id='clean' style="width:100%;" rows="5"></textarea><br />
+            <button id='cleanIt'>clean</button>
+          </div>
+<script>
+$(function() {
+    $('#cleanIt').on('click', function(event) {
+        var d = Util.cleanup($('#dirty').val(), false);
+        $('#clean').val(d);
+    });
+});
+</script>
+
           <h3>License</h3>
           <p><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></p>
 

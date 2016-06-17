@@ -89,8 +89,8 @@
             /* process each sentence. */
             var sentences = d.split(' . ');
             for (var s = 0; s < sentences.length; s++) {
-                var terms = d.split(' '); /* could be '' in there. */
-                var words = [];
+            	var words = [];
+                var terms = sentences[s].split(' '); /* could be '' in there. */
 
                 for (var i = 0; i < terms.length; i++) {
                     if (terms[i] === '' || terms[i] === ' ') {
