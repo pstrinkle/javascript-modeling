@@ -56,14 +56,14 @@ $(function() {
             <h4>Stopwords</h4>
             <p>You can upload a text file of newline separated stop words.  These 
             words will be stripped from the input documents.</p>
-            <button id='stopwords'>Upload Stopwords (.txt)</button>
+            <button id='stopwords'>upload Stopwords (.txt)</button>
             <input type='file' id='stopwords_input' style="display:none;" />
             <pre id='stopwords_area'></pre>
           </div>
           <div>
             <h4>Queries</h4>
             <p>Need to allow uploading loads of files for querying.</p>
-            <button id='upload_document'>Upload document (.txt)</button><button id='clear_corpus'>clear</button>
+            <button id='upload_document'>upload document (.txt)</button><button id='clear_corpus'>clear</button>
             <input type='file' id='upload_document_input' style="display:none;" />
             <br /><br />
             <div id='docs'></div>
@@ -88,7 +88,7 @@ $(function() {
               </div>
             </div>
             <div style="clear:both;"></div>
-            <button id='btn'>Compare</button>
+            <button id='btn'>compare</button>
             <pre id='out'></pre>
           </div>
 <script>
@@ -111,8 +111,8 @@ $(function() {
         });
     };
     $('#clear_corpus').on('click', function(event) {
-    	$('#docs').empty();
-    	VectorSpace.emptyCorpus();
+        $('#docs').empty();
+        VectorSpace.emptyCorpus();
     });
     $('#clear').on('click', function(event) {
         $('#results').empty();
@@ -185,8 +185,8 @@ $(function() {
           <div>
             <ol>
               <li>Enter text into the box.</li>
-              <li>Click "Learn" for it to update the model</li>
-              <li>Click "Write" to generate words, or type directly into the box.</li>
+              <li>Click "learn" for it to update the model</li>
+              <li>Click "write" to generate words, or type directly into the box.</li>
             </ol>
             <p>Presently it always tries to build the highest probability pair 
             (although given equal probabilities it randomly chooses).
@@ -194,8 +194,9 @@ $(function() {
             pool so it's more likely to choose that path, but won't every time.
             </p>
             <textarea id='learning' style="width:100%;" rows="10"></textarea><br />
-            <button id='learn'>Learn</button>
-            <button id='write'>Write</button>
+            <button id='learn'>learn</button>
+            <button id='write'>write</button>
+            <pre id='log'></pre>
           </div>
 <script>
 $(function() {
@@ -205,6 +206,10 @@ $(function() {
     $('#learn').on('click', function(event) {
         Bigrams.init($learning.val());
         $learning.val('');
+
+        var $log = $('#log');
+        $log.empty();
+        $log.text(JSON.stringify(Bigrams.getBigrams(), null, 2));
     });
 
     var generate = function(highlight = false) {
@@ -257,8 +262,89 @@ $(function() {
 </script>
 
           <h3>Trigrams</h3>
-          <p>Coming shortly.</p>
-          <p><strong>How to have it generate it's first word...</strong></p>
+          <div>
+            <p>Coming shortly.</p>
+            <p><strong>How to have it generate it's first word...</strong></p>
+            <textarea id='learning2' style="width:100%;" rows="10"></textarea><br />
+            <button id='learn2'>learn</button>
+            <button id='write2'>write</button>
+            <pre id='log2'></pre>
+          </div>
+<script>
+$(function() {
+    var $learning2 = $('#learning2');
+    Trigrams.cleanup = Util.cleanup;
+
+    $('#learn2').on('click', function(event) {
+        var $log2 = $('#log2');
+        $log2.empty();
+
+        Trigrams.init($learning2.val());
+
+        $learning2.val('');
+
+        $log2.text(JSON.stringify(Trigrams.getTrigrams(), null, 2));
+    });
+
+    var generate2 = function(highlight = false) {
+        var sofar = $learning2.val().trim();        
+        var next = '';
+        var plusone = 0;
+
+        if (sofar.length == 0) {
+            next = Trigrams.generate("|");
+        } else {
+            var words = sofar.split(' ');
+            var last = words[words.length-1];
+
+            /* handle there is only one word. */
+            if (words.length === 1 || words.length === 2 && words[1] === '') {
+                next = Trigrams.generate("|", words[0]);
+            } else {
+                if (last === '.' || last.endsWith(".")) {
+                    next = Trigrams.generate("|");
+                } else {
+                    var prev = words[words.length-2];
+
+                    if (prev === '.' || prev.endsWith(".")) {
+                        next = Trigrams.generate("|", last);
+                    } else {
+                        next = Trigrams.generate(prev, last);
+                    }                    
+                }
+            }
+        }
+
+        if (next === '.') {
+            if (!highlight) {
+                $learning2.val(sofar + next + ' ');
+            }
+        } else {
+            if (sofar.length == 0) {
+                $learning2.val(sofar + next);
+            } else {
+                plusone = 1;
+                $learning2.val(sofar + ' ' + next);    
+            }
+
+            if (highlight) {
+                $learning2.selectRange(sofar.length + plusone, -1);
+            }
+        }
+    };
+    
+    $learning2.keyup(function(event) {
+        if (event.which == 32) {
+            // space
+            generate2(true);
+        }
+    });
+
+    $('#write2').on('click', function(event) {
+        generate2();
+    });
+});
+</script>
 
           <h3>License</h3>
           <p><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></p>
@@ -288,6 +374,7 @@ $(function() {
     <script src="assets/jquery.selectrange.js"></script>
     <script src="src/util.js"></script>
     <script src="src/bigrams.js"></script>
+    <script src="src/trigrams.js"></script>
     <script src="src/vectorspace.js"></script>
   
   </body>

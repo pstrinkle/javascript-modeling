@@ -18,14 +18,18 @@
  */
 (function(w) {
     w.Util = {
+        
         /**
          * Cleanup the input.  I need to make this something you provide as a
          * caller because I have the same code in two modules, which is poor
          * design.
+         * 
+         * merge := if true, it makes into one long sentence, otherwise it keeps
+         * some sense of sentence separation.
          */
-        cleanup: function(d) {
+        cleanup: function(d, merge = true) {
             /* the following code also appears in my VectorSpace module... */
-            var bad = ['.', ',', '?', '!', ':', ';', '(', ')'];
+            var bad = [',', ':', ';', '(', ')', '\n', '\t'];
             var escapeRegExp = function(string) {
                 return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
             };
@@ -42,6 +46,27 @@
             for (var i = 0; i < bad.length; i++) {
                 d = replaceAll(d, bad[i] + " ", " ");
                 d = replaceAll(d, " " + bad[i], " ");
+            }
+            
+            /* now cleanup any bizarre straggler cases. */
+            for (i = 0; i < bad.length; i++) {
+            	d = replaceAll(d, bad[i], "");
+            }
+
+            /* we always add a trailing ' ' to help with:
+             * What about bob. => What about bob . 
+             * Where are you? => Where are you . 
+             * I'm here! => I'm here . 
+             * 
+             * Then we split on " . "
+             */
+            var seps = ['.', '?', '!'];
+            for (i = 0; i < seps.length; i++) {
+                d = replaceAll(d, seps[i] + ' ', " . ");
+            }
+
+            if (merge) {
+            	d = replaceAll(d, " . ", " ");
             }
 
             return d;
