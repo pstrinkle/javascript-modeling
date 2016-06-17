@@ -188,6 +188,11 @@ $(function() {
               <li>Click "Learn" for it to update the model</li>
               <li>Click "Write" to generate words, or type directly into the box.</li>
             </ol>
+            <p>Presently it always tries to build the highest probability pair 
+            (although given equal probabilities it randomly chooses).
+            I'd like to have it optionally choose randomly against a weighted 
+            pool so it's more likely to choose that path, but won't every time.
+            </p>
             <textarea id='learning' style="width:100%;" rows="10"></textarea><br />
             <button id='learn'>Learn</button>
             <button id='write'>Write</button>
