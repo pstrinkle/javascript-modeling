@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" media="screen">
+
+    <!-- above the fold, it is render-blocking deliberately. -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>Javascript-modeling by pstrinkle</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>javascript-modeling</h1>
+        <h2>Some fun and somewhat silly modeling modules written in pure JavaScript</h2>
+        <a href="https://github.com/pstrinkle/javascript-modeling" class="button"><small>View project on</small> GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h3><a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>The Basics</h3>
+          <p>...</p>
+<script>
+$(function() {
+    if (!String.prototype.endsWith) {
+        String.prototype.endsWith = function(searchString, position) {
+            var subjectString = this.toString();
+            if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+                position = subjectString.length;
+            }
+            position -= searchString.length;
+            var lastIndex = subjectString.indexOf(searchString, position);
+            return lastIndex !== -1 && lastIndex === position;
+        };
+    }
+});
+</script>
+
+          <h3>Vectorspace</h3>
+          <div>
+            <h4>Stopwords</h4>
+            <p>You can upload a text file of newline separated stop words.  These 
+            words will be stripped from the input documents.</p>
+            <button id='stopwords'>Upload Stopwords (.txt)</button>
+            <input type='file' id='stopwords_input' style="display:none;" />
+            <pre id='stopwords_area'></pre>
+          </div>
+          <div>
+            <h4>Queries</h4>
+            <p>Need to allow uploading loads of files for querying.</p>
+            <button id='upload_document'>Upload document (.txt)</button><button id='clear_corpus'>clear</button>
+            <input type='file' id='upload_document_input' style="display:none;" />
+            <br /><br />
+            <div id='docs'></div>
+            <br />
+            <strong>Enter query:</strong>&nbsp;<input type='text' id='query_input' />
+            <button id='run_query'>query</button><button id='clear'>clear</button>
+            <br />
+            <div id='results'></div>
+            <pre id='qout'></pre>
+          </div>
+          <div>
+            <h4>Document Comparison</h4>
+            <p>You can enter text into each box and compare the two documents.</p>
+            <div>
+              <div style="width:50%;float:left;">
+                <strong>Document 1</strong>
+                <textarea id='content' style="width:98%;resize:vertical;" rows="5"></textarea>
+              </div>
+              <div style="width:50%;float:left;">
+                <strong>Document 2</strong>
+                <textarea id='content2' style="width:98%;resize:vertical;" rows="5"></textarea>
+              </div>
+            </div>
+            <div style="clear:both;"></div>
+            <button id='btn'>Compare</button>
+            <pre id='out'></pre>
+          </div>
+<script>
+$(function() {
+    VectorSpace.cleanup = Util.cleanup;
+
+    var updateList = function() {
+        var docs = VectorSpace.listCorpus();
+        var $docs = $('#docs');
+        $docs.empty();
+        $.each(docs, function(index, element) {
+            var $li = $('<li>', {text: element});
+            $li.on('click', function(event) {
+                var $q = $('#qout');
+                $q.empty();
+                $q.text('"' + VectorSpace.getDocument(element) + '"\n');
+                $q.append(JSON.stringify(VectorSpace.getDocumentTf(element), null, 2));
+            });
+            $docs.append($li);
+        });
+    };
+    $('#clear_corpus').on('click', function(event) {
+    	$('#docs').empty();
+    	VectorSpace.emptyCorpus();
+    });
+    $('#clear').on('click', function(event) {
+        $('#results').empty();
+    });
+    $('#run_query').on('click', function(event) {
+        var $results = $('#results');
+        $('#qout').empty();
+        var results = VectorSpace.query($('#query_input').val());
+
+        $results.empty();
+        var $ol = $('<ol>');
+
+        $.each(results, function(index, element) {
+            $ol.append($('<li>', {text: element[0]}));
+        });
+
+        $results.append($ol);
+    });
+
+    $('#stopwords').on('click', function(event) {
+        $('#stopwords_input').trigger('click');
+    });
+    $('#upload_document').on('click', function(event) {
+        $('#upload_document_input').trigger('click');
+    });
+    $('#stopwords_input').on('change', function(event) {
+        if (this.files[0] == undefined) {
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function(){
+            var text = reader.result;
+            VectorSpace.importStopwords(text);
+            /* */
+            $('#stopwords_area').text(JSON.stringify(VectorSpace.getStopwords(), null, 2));
+        };
+        reader.readAsText(this.files[0]);
+    });
+    $('#upload_document_input').on('change', function(event) {
+        if (this.files[0] == undefined) {
+            return;
+        }
+        var name = this.files[0]['name'];
+        var reader = new FileReader();
+        reader.onload = function(){
+            var text = reader.result; 
+            VectorSpace.addDocument(name, text);
+            updateList();
+        };
+        reader.readAsText(this.files[0]);
+    });
+    $('#btn').on('click', function(event) {
+        event.preventDefault();
+        $('#log').empty();
+        var $out = $('#out');
+        $out.empty();
+
+        var modelA = VectorSpace.process($('#content').val());
+        var modelB = VectorSpace.process($('#content2').val());
+        var score = VectorSpace.cosineSimilarity(modelA, modelB) * 100;
+
+        $out.append(JSON.stringify(modelA, null, 2) + '\n');
+        $out.append(JSON.stringify(modelB, null, 2) + '\n');
+        $out.append(score + '%');
+    });
+});
+</script>
+
+          <h3>Bigrams</h3>
+          <div>
+            <ol>
+              <li>Enter text into the box.</li>
+              <li>Click "Learn" for it to update the model</li>
+              <li>Click "Write" to generate words, or type directly into the box.</li>
+            </ol>
+            <textarea id='learning' style="width:100%;" rows="10"></textarea><br />
+            <button id='learn'>Learn</button>
+            <button id='write'>Write</button>
+          </div>
+<script>
+$(function() {
+    var $learning = $('#learning');
+    Bigrams.cleanup = Util.cleanup;
+
+    $('#learn').on('click', function(event) {
+        Bigrams.init($learning.val());
+        $learning.val('');
+    });
+
+    var generate = function(highlight = false) {
+        var sofar = $learning.val().trim();        
+        var next = '';
+        var plusone = 0;
+
+        if (sofar.length == 0) {
+            next = Bigrams.generate("|");
+        } else {
+            var words = sofar.split(' ');            
+            var last = words[words.length-1];
+
+            if (last === '.' || last.endsWith(".")) {
+                next = Bigrams.generate("|");
+            } else {
+                next = Bigrams.generate(last);
+            }
+        }
+
+        if (next === '.') {
+            if (!highlight) {
+                $learning.val(sofar + next + ' ');
+            }
+        } else {
+            if (sofar.length == 0) {
+                $learning.val(sofar + next);
+            } else {
+                plusone = 1;
+                $learning.val(sofar + ' ' + next);    
+            }
+
+            if (highlight) {
+                $learning.selectRange(sofar.length + plusone, -1);
+            }
+        }
+    };
+    
+    $learning.keyup(function(event) {
+        if (event.which == 32) {
+            // space
+            generate(true);
+        }
+    });
+
+    $('#write').on('click', function(event) {
+        generate();
+    });
+});
+</script>
+
+          <h3>Trigrams</h3>
+          <p>Coming shortly.</p>
+          <p><strong>How to have it generate it's first word...</strong></p>
+
+          <h3>License</h3>
+          <p><a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></p>
+
+          <h3><a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
+          <a href="https://twitter.com/YammyCozonac" class="twitter-follow-button" data-show-count="false" data-size="large">Follow @YammyCozonac</a> <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+          <a class="github-button" href="https://github.com/pstrinkle" data-style="mega" aria-label="Follow @pstrinkle on GitHub">Follow @pstrinkle</a>
+          <!-- <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span> -->
+          <script async defer src="https://buttons.github.io/buttons.js"></script>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/pstrinkle/javascript-modeling/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/pstrinkle/javascript-modeling/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/pstrinkle/javascript-modeling"></a> is maintained by <a href="https://github.com/pstrinkle">pstrinkle</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+    <script src="assets/jquery.selectrange.js"></script>
+    <script src="src/util.js"></script>
+    <script src="src/bigrams.js"></script>
+    <script src="src/vectorspace.js"></script>
+  
+  </body>
+</html>

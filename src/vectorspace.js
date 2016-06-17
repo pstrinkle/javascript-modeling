@@ -1,4 +1,7 @@
 /**
+ * URL: http://pstrinkle.github.io/javascript-modeling
+ * Author: Patrick Trinkle <https://github.com/pstrinkle>
+ * Version: 1.0.0
  * Copyright 2016 Patrick Trinkle
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,13 +42,44 @@
          */
         corpus: {},
 
+        listCorpus: function() {
+            return Object.keys(this.corpus);
+        },
+        getDocument: function(name) {
+            return this.corpus[name].doc;
+        },
+        getDocumentTf: function(name) {
+            return this.corpus[name].tf;
+        },
+
+        emptyCorpus: function() {
+            var docs = Object.keys(this.corpus);
+            var fs = Object.keys(this.documentFreqs);
+            var os = Object.keys(this.documentOccurs);
+            
+            for (var i = 0; i < docs.length; i++) {
+                delete this.corpus[docs[i]];
+            }
+            for (i = 0; i < fs.length; i++) {
+                delete this.documentFreqs[fs[i]];
+            }
+            for (i = 0; i < os.length; i++) {
+                delete this.documentOccurs[os[i]];
+            }
+        },
+        
         /**
          * The number of documents in which this word appears.
          * 
          * documentFreqs[term] = cnt
          */
         documentFreqs: {},
-
+        /**
+         * The documents in which a term appears.  To speedup querying.
+         * 
+         * documentOccurs[term] = [doc, doc, doc, ...]
+         */
+        documentOccurs: {},
         /**
          * Add document to the corpus.
          *
@@ -59,24 +93,29 @@
              * parameter to determine if it should or not.
              */
             for (var i = 0; i < nterms.length; i++) {
-                if (documentFreqs[nterms[i]] == undefined) {
-                    documentFreqs[nterms[i]] = 0;
+                var t = nterms[i];
+                
+                if (this.documentFreqs[t] == undefined) {
+                    this.documentFreqs[t] = 0;
+                    
+                    this.documentOccurs[t] = [];
                 }
 
-                documentFreqs[nterms[i]] += 0;
+                this.documentFreqs[t] += 1;
+                this.documentOccurs[t].push(name);
             }
 
             var entry = {
+                doc: d,
                 tf: vec,
                 data: {}, /* this will be built during the update */
             };
 
-            if (corpus[name] != undefined) {
+            if (this.corpus[name] != undefined) {
                 throw "Document already exists";
             }
 
-            corpus[name] = entry;
-
+            this.corpus[name] = entry;
             this.updateValues();
 
             return;
@@ -87,14 +126,14 @@
          * so we need to update them.  Well, the idf portion.
          */
         updateValues: function() {
-            var documents = Object.keys(corpus);
+            var documents = Object.keys(this.corpus);
 
             for (var i = 0; i < documents.length; i++) {
-                var doc = corpus[documents[i]];
+                var doc = this.corpus[documents[i]];
                 var terms = Object.keys(doc.tf);
                 for (var j = 0; j < terms.length; j++) {
                     var t = terms[j];
-                    var idf = Math.log10(1 + documents.length / documentFreqs[t]);
+                    var idf = Math.log10(1 + documents.length / this.documentFreqs[t]);
                     /* store the result. */
                     doc.data[t] = doc.tf[t] * idf;
                 }
@@ -103,6 +142,40 @@
             return;
         },
 
+        query: function(q) {
+            var qvec = this.process(q); /* convert string into vector, strip stopwords. */
+            var docs = {};
+
+            /* XXX: need to update the values here to have an idf of sorts. */
+            var terms = Object.keys(qvec);
+            for (var i = 0; i < terms.length; i++) {
+                var t = terms[i];
+                if (this.documentOccurs[t] == undefined) {
+                    continue;
+                }
+
+                for (var j = 0; j < this.documentOccurs[t].length; j++) {
+                    var n = this.documentOccurs[t][j];
+                    if (docs[n] == undefined) {
+                        docs[n] = 0;
+                    }
+                }
+            }
+
+            var d = Object.keys(docs);
+            var results = [];
+            for (i = 0; i < d.length; i++) {
+                var res = this.cosineSimilarity(qvec, this.corpus[d[i]].data);
+                results.push([d[i], res]);
+            }
+
+            var sorted = results.sort(function(a, b) {
+                return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0;
+            });
+
+            return sorted;
+        },
+        
         /**************************************************************************/
 
         /**
@@ -115,15 +188,39 @@
          */
         stopwords: {},
 
+        getStopwords: function() {
+            return Object.keys(this.stopwords);
+        },
+
         /**
          * receives a string that is a newline separated list of words.
          */
         importStopwords: function(words) {
             var nwords = this.process(words, false);
             var nobj = Object.keys(nwords);
+
+            var docs = (Object.keys(this.corpus).length > 0) ? true: false;
+            
             for (var i = 0; i < nobj.length; i++) {
-                if (this.stopwords[nobj[i]] == undefined) {
-                    this.stopwords[nobj[i]] = 1;
+                var t = nobj[i];
+                
+                if (this.stopwords[t] == undefined) {
+                    this.stopwords[t] = 1;
+                }
+                
+                if (docs) {
+                    if (this.documentFreqs[t]) {
+                        delete this.documentFreqs[t];
+                    }
+                    if (this.documentOccurs[t]) {
+                        for (var j = 0; j < this.documentOccurs[t].length; j++) {
+                            var n = this.documentOccurs[t][j];
+                            delete this.corpus[n].tf[t];
+                            delete this.corpus[n].data[t];
+                        }
+
+                        delete this.documentOccurs[t];
+                    }
                 }
             }
 
@@ -147,18 +244,22 @@
                     dotProduct += d1[t] * d2[t]
                 }
             }
-            
+
             for (i = 0; i < b_words.length; i++) {
                 var t = b_words[i];
                 b_sqrs += (d2[t] * d2[t]);
             }
-            
+
             var a_sqrt = Math.sqrt(a_sqrs);
             var b_sqrt = Math.sqrt(b_sqrs);
 
             return (dotProduct / (a_sqrt * b_sqrt))
         },
-    
+        
+        cleanup: function(d) {
+            return d;
+        },
+
         /**
          * Given a string, it splits it into words and returns a term weight
          * dictionary, such that term weight is 0.5 + (0.5 * tw/max)
@@ -169,22 +270,7 @@
          * stop := boolean whether to care about stopwords.
          */
         process: function(d, stop = true) {
-            var bad = ['.', ',', '?', '!', ':', ';'];
-            var escapeRegExp = function(string) {
-                return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
-            };
-            var replaceAll = function(string, find, replace) {
-                return string.replace(new RegExp(escapeRegExp(find), 'g'), replace);
-            };
-
-            d = replaceAll(d, '\n', ' ');
-
-            /* Also need to remove punctation at the beginning or end of the
-             * string.
-             */
-            for (var i = 0; i < bad.length; i++) {
-                d = replaceAll(d, bad[i] + " ", " ");
-            }
+            d = this.cleanup(d);
 
             /* probably does leave some words that are ' ' */
             var words = d.split(' ');

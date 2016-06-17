@@ -19,9 +19,9 @@
 (function(w) {
     "use strict";
     /**
-     * Initially a super basic bigrams text generative model.
+     * Initially a super basic trigram text generative model.
      */
-    w.Bigrams = {
+    w.Trigrams = {
         /**
          * Where we store the current model.
          *
@@ -30,18 +30,22 @@
          * It is a two-deep object.  Since it needs to be sorted for speedup, I'll
          * likely have that operation occur whenever it learns from a new document.
          */
-        bigrams: {},
+        trigrams: {},
 
-        addBigram: function(now, next) {
-            if (this.bigrams[now] == undefined) {
-                this.bigrams[now] = {};
+        addTrigram: function(prev, now, next) {
+        	if (this.trigrams[prev] == undefined) {
+        		this.trigrams[prev] = {};
+        	}
+        	
+            if (this.trigrams[prev][now] == undefined) {
+                this.trigrams[prev][now] = {};
             }
 
-            if (this.bigrams[now][next] == undefined) {
-                this.bigrams[now][next] = 0;
+            if (this.trigrams[prev][now][next] == undefined) {
+                this.trigrams[prev][now][next] = 0;
             }
 
-            this.bigrams[now][next] += 1;
+            this.trigrams[prev][now][next] += 1;
         },
 
         cleanup: function(d) {
@@ -55,7 +59,7 @@
         init: function(d) {
             d = this.cleanup(d);
 
-            var bigrams = {};
+            var trigrams = {};
             var terms = d.split(' '); /* could be '' in there. */
             var words = [];
 
@@ -68,17 +72,18 @@
                 words.push(l);
             }
 
-            if (words.length < 2) {
+            if (words.length < 3) {
                 throw "Document must have at least two words.";
             }
 
             /* handle edge case: sentence starts with. */
-            this.addBigram('|', words[0]);
+            this.trigrams('|', words[0], words[1]);
 
-            for (i = 0; i < (words.length-1); i++) {
+            for (i = 0; i < (words.length-2); i++) {
                 var t0 = words[i];
                 var t1 = words[i+1];
-                this.addBigram(t0, t1);
+                var t2 = words[i+2];
+                this.addTrigram(t0, t1, t2);
             }
 
             return;
@@ -90,21 +95,22 @@
          *
          * ... need to re-examine the posterior probabilities.
          */
-        generate: function(curr) {
-            if (this.bigrams[curr] == undefined) {
+        generate: function(prev, curr) {
+            if (this.trigrams[prev] == undefined || this.trigrams[prev][curr] == undefined) {
                 /* we have no idea..., could rely on part-of-speech, or
                  * ... a few other optiosn.
                  */
                 return ".";
             }
-            
+
+            prev = prev.toLowerCase();
             curr = curr.toLowerCase();
 
             var options = [];
-            var available = Object.keys(this.bigrams[curr]);
+            var available = Object.keys(this.trigrams[prev][curr]);
             for (var i = 0; i < available.length; i++) {
                 var t = available[i];
-                options.push([t, this.bigrams[curr][t]]);
+                options.push([t, this.trigrams[prev][curr][t]]);
             }
             var sorted = options.sort(function(a, b) {
                 return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0;
