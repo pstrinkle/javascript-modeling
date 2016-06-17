@@ -18,7 +18,6 @@
  */
 (function(w) {
     w.Util = {
-        
         /**
          * Cleanup the input.  I need to make this something you provide as a
          * caller because I have the same code in two modules, which is poor
@@ -28,8 +27,6 @@
          * some sense of sentence separation.
          */
         cleanup: function(d, merge = true) {
-            /* the following code also appears in my VectorSpace module... */
-            var bad = [',', ':', ';', '(', ')', '\n', '\t'];
             var escapeRegExp = function(string) {
                 return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
             };
@@ -40,14 +37,30 @@
             d += '\n'; /* make sure it always ends with a space. */
             d = replaceAll(d, '\n', ' ');
 
+            var whitespace = ['\t', ' '];
+
+            for (var i = 0; i < whitespace.length; i++) {
+            	d = d.replace(new RegExp('[' + escapeRegExp(whitespace[i]) + ']+', 'g'), whitespace[i]);
+            }
+
             /* Also need to remove punctation at the beginning or end of the
              * string.
              */
+            var bad = [',', ':', ';', '(', ')', '{', '}', '\n', '[', ']',
+                       '`', '~', '@', '#', '$', '%', '^', '&', '*', '\\', '|',
+                       '<', '>', '/', '"', '_', '-', '+', '='];
+
+            /* convert !!! => ! */
             for (var i = 0; i < bad.length; i++) {
+            	d = d.replace(new RegExp('[' + escapeRegExp(bad[i]) + ']+', 'g'), bad[i]);
+            }
+
+            /* convert ", " => " " */
+            for (i = 0; i < bad.length; i++) {
                 d = replaceAll(d, bad[i] + " ", " ");
                 d = replaceAll(d, " " + bad[i], " ");
             }
-            
+
             /* now cleanup any bizarre straggler cases. */
             for (i = 0; i < bad.length; i++) {
             	d = replaceAll(d, bad[i], "");
@@ -61,6 +74,11 @@
              * Then we split on " . "
              */
             var seps = ['.', '?', '!'];
+
+            for (i = 0; i < seps.length; i++) {
+            	d = d.replace(new RegExp('[' + escapeRegExp(seps[i]) + ']+', 'g'), seps[i]);
+            }
+
             for (i = 0; i < seps.length; i++) {
                 d = replaceAll(d, seps[i] + ' ', " . ");
             }

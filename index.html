@@ -34,7 +34,7 @@
       <div class="inner clearfix">
         <section id="main-content">
           <h3><a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>The Basics</h3>
-          <p>...</p>
+          <p>I need to spend some time working on the data cleaning.</p>
 <script>
 $(function() {
     if (!String.prototype.endsWith) {
@@ -263,8 +263,6 @@ $(function() {
 
           <h3>Trigrams</h3>
           <div>
-            <p>Coming shortly.</p>
-            <p><strong>How to have it generate it's first word...</strong></p>
             <textarea id='learning2' style="width:100%;" rows="10"></textarea><br />
             <button id='learn2'>learn</button>
             <button id='write2'>write</button>
@@ -342,6 +340,22 @@ $(function() {
 
     $('#write2').on('click', function(event) {
         generate2();
+    });
+});
+</script>
+
+          <h3>String Cleaning</h3>
+          <div>
+            <p>Just for testing what happens when strings are sent in.</p>
+            <textarea id='dirty' style="width:100%;" rows="5"></textarea><br />
+            <textarea id='clean' style="width:100%;" rows="5"></textarea><br />
+            <button id='cleanIt'>clean</button>
+          </div>
+<script>
+$(function() {
+    $('#cleanIt').on('click', function(event) {
+        var d = Util.cleanup($('#dirty').val(), false);
+        $('#clean').val(d);
     });
 });
 </script>
