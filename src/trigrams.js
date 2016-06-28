@@ -54,12 +54,12 @@
 
         starts: {},
 
-        addStart: function(now, next) {
-        	if (this.starts[now] == undefined) {
-        		this.starts[now] = 0;
-        	}
+        addStart: function(now) {
+            if (this.starts[now] == undefined) {
+                this.starts[now] = 0;
+            }
 
-        	this.starts[now] += 1;
+            this.starts[now] += 1;
         },
 
         cleanup: function(d) {
@@ -71,14 +71,14 @@
          * you can add more data to the model if you want later.
          */
         init: function(d) {
-        	var trigrams = {};
+            var trigrams = {};
 
             d = this.cleanup(d, false);
 
             /* process each sentence. */
             var sentences = d.split(' . ');
             for (var s = 0; s < sentences.length; s++) {
-            	var words = [];
+                var words = [];
                 var terms = sentences[s].split(' '); /* could be '' in there. */
 
                 for (var i = 0; i < terms.length; i++) {
@@ -96,14 +96,14 @@
 
                 /* handle edge case: sentence starts with. */
                 this.addTrigram('|', words[0], words[1]);
-                this.addStart(words[0], words[1]);
+                this.addStart(words[0]);
 
                 for (i = 0; i < (words.length-2); i++) {
                     var t0 = words[i];
                     var t1 = words[i+1];
                     var t2 = words[i+2];
                     this.addTrigram(t0, t1, t2);
-                }            	
+                }                
             }
 
             return;
@@ -111,7 +111,7 @@
 
         /**
          * Given what it knows so far, and providing the current word, return
-         * what it thinks will be the next word (the one with the highest probability)
+         * what it thinks will be the next word (a weighted random variable)
          *
          * ... need to re-examine the posterior probabilities.
          */
@@ -121,16 +121,16 @@
             var getRandomArbitrary = function(min, max) {
               return Math.random() * (max - min) + min;
             }
-            
+
             var options = [];
             var totalCnts = 0;
             var percentage = 0.0;
             var random_num = getRandomArbitrary(0, 1);
-        	
-        	if (prev === '|' && curr == undefined) {
-        		/* first word. */        		
 
-        		var available = Object.keys(this.starts);
+            if (prev === '|' && curr == undefined) {
+                /* first word. */                
+
+                var available = Object.keys(this.starts);
 
                 for (var i = 0; i < available.length; i++) {
                     var t = available[i];
@@ -138,8 +138,8 @@
                     options.push([t, c]);
                     totalCnts += c;
                 }
-        	} else {
-        		prev = prev.toLowerCase();
+            } else {
+                prev = prev.toLowerCase();
                 curr = curr.toLowerCase();
 
                 /* we have no idea..., could rely on part-of-speech, or a few 
@@ -157,14 +157,14 @@
                     options.push([t, c]);
                     totalCnts += c;
                 }
-        	}
+            }
 
             for (var i = 0; i < options.length; i++) {
-            	var o = options[i]; // [0] == letter, [1] == count
-            	percentage += (o[1] / totalCnts);
-            	if (random_num <= percentage) {
-            		return o[0];
-            	}
+                var o = options[i]; // [0] == letter, [1] == count
+                percentage += (o[1] / totalCnts);
+                if (random_num <= percentage) {
+                    return o[0];
+                }
             }
         },
     };
