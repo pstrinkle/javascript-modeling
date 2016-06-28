@@ -95,7 +95,7 @@
 
         /**
          * Given what it knows so far, and providing the current word, return
-         * what it thinks will be the next word (the one with the highest probability)
+         * what it thinks will be the next word (a weighted random variable)
          *
          * ... need to re-examine the posterior probabilities.
          */
@@ -130,11 +130,11 @@
             }
 
             for (var i = 0; i < options.length; i++) {
-            	var o = options[i]; // [0] == letter, [1] == count
-            	percentage += (o[1] / totalCnts);
-            	if (random_num <= percentage) {
-            		return o[0];
-            	}
+                var o = options[i]; // [0] == letter, [1] == count
+                percentage += (o[1] / totalCnts);
+                if (random_num <= percentage) {
+                    return o[0];
+                }
             }
         },
     };

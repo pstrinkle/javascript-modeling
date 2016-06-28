@@ -303,6 +303,10 @@ $(function() {
                     next = Trigrams.generate("|");
                 } else {
                     var prev = words[words.length-2];
+                    
+                    // prev last {next}
+                    // so if prev was the end of a sentence, last was the first
+                    // word of the next.
 
                     if (prev === '.' || prev.endsWith(".")) {
                         next = Trigrams.generate("|", last);
