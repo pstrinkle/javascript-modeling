@@ -1,5 +1,5 @@
 /**
- * URL: http://pstrinkle.github.io/javascript-modeling
+ * URL: http://pstrinkle.github.io/js-modeling
  * Author: Patrick Trinkle <https://github.com/pstrinkle>
  * Version: 1.0.0
  * Copyright 2016 Patrick Trinkle
@@ -100,52 +100,42 @@
          * ... need to re-examine the posterior probabilities.
          */
         generate: function(curr) {
-            curr = curr.toLowerCase();
-
-            if (this.bigrams[curr] == undefined) {
-                /* we have no idea..., could rely on part-of-speech, or
-                 * ... a few other optiosn.
-                 */
-                return ".";
+            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+            // Returns a random number between min (inclusive) and max (exclusive)
+            var getRandomArbitrary = function(min, max) {
+              return Math.random() * (max - min) + min;
             }
 
             var options = [];
+            var totalCnts = 0;
+            var percentage = 0.0;
+            var random_num = getRandomArbitrary(0, 1);
+
+            curr = curr.toLowerCase();
+
+            /* we have no idea..., could rely on part-of-speech, or a few other 
+             * options.
+             */
+            if (this.bigrams[curr] == undefined) {
+                return ".";
+            }
+
             var available = Object.keys(this.bigrams[curr]);
+
             for (var i = 0; i < available.length; i++) {
                 var t = available[i];
-                options.push([t, this.bigrams[curr][t]]);
+                var c = this.bigrams[curr][t];
+                options.push([t, c]);
+                totalCnts += c;
             }
-            var sorted = options.sort(function(a, b) {
-                return a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0;
-            });
 
-            /* if there are multiple that are the same probability, it should
-             * randomly choose one of them, instead of always choosing the top
-             * of its list.
-             */
-            if (sorted.length > 1) {
-                /* group the top terms if there are */
-                var newtop = [sorted[0][0]];
-                var value = sorted[0][1];
-                for (var j = 1; j < sorted.length; j++) {
-                    if (sorted[j][1] === value) {
-                        newtop.push(sorted[j][0]);
-                    } else {
-                        break; /* we're done. */
-                    }
-                }
-
-                // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
-                // Returns a random integer between min (included) and max (excluded)
-                var getRandomInt = function(min, max) {
-                    return Math.floor(Math.random() * (max - min)) + min;
-                }
-
-                var get = getRandomInt(0, newtop.length);
-                return newtop[get];
-            } else {
-                return sorted[0][0];
-            }        
+            for (var i = 0; i < options.length; i++) {
+            	var o = options[i]; // [0] == letter, [1] == count
+            	percentage += (o[1] / totalCnts);
+            	if (random_num <= percentage) {
+            		return o[0];
+            	}
+            }
         },
     };
 })(this);
